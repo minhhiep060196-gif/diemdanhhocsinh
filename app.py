@@ -3,84 +3,65 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# 1. CẤU HÌNH GIAO DIỆN TƯƠNG PHẢN CAO
-st.set_page_config(page_title="Sổ Điểm Danh Pro", layout="wide")
+# 1. CẤU HÌNH GIAO DIỆN
+st.set_page_config(page_title="Quản Lý Học Phí & Điểm Danh", layout="wide")
+
+# Quy định giá tiền
+GIA_MOT_BUOI = 150000
 
 st.markdown("""
     <style>
-    /* Nền trắng sáng để chữ rõ nét nhất */
-    .stApp {
-        background-color: #FFFFFF;
-    }
+    .stApp { background-color: #FFFFFF; }
     
-    /* Khung chứa tên học sinh trong Nhật Ký */
-    .student-header-box {
+    /* Khung tên học sinh trong Nhật Ký & Học Phí */
+    .header-box {
         background-color: #E7F1FF;
         padding: 15px;
         border-radius: 12px;
-        border-left: 8px solid #007BFF;
+        border-left: 8px solid #28A745;
         margin-bottom: 20px;
     }
-    .student-header-name {
-        color: #004085;
-        font-size: 1.5rem !important;
-        font-weight: 800;
-        margin: 0;
-    }
-
-    /* Thẻ học sinh ở Tab Tổng hợp */
-    .summary-container {
+    
+    /* Thẻ học phí học sinh */
+    .fee-card {
+        background-color: #F8F9FA;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #DEE2E6;
+        margin-bottom: 10px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px 18px;
-        background-color: #F8F9FA;
-        border-radius: 10px;
-        margin-bottom: 8px;
-        border: 1px solid #DEE2E6;
     }
 
-    /* Màu số buổi xanh dương đậm */
+    .fee-amount {
+        color: #28A745;
+        font-weight: 800;
+        font-size: 1.4rem;
+    }
+
     .total-count {
         color: #0056b3;
         font-weight: 800;
-        font-size: 1.3rem;
-    }
-
-    /* Tên học sinh ở các mục khác */
-    .st-student-name {
-        font-weight: 700;
-        color: #212529; /* Chữ gần đen để dễ đọc */
         font-size: 1.1rem;
     }
 
-    /* Tab Label - Làm đậm chữ ở Tab */
-    button[data-baseweb="tab"] p {
-        font-weight: 700 !important;
-        font-size: 1rem !important;
-    }
-
-    /* Tùy chỉnh Checkbox Điểm danh - To và Rõ */
+    /* Tùy chỉnh Checkbox Điểm danh */
     div[data-testid="stCheckbox"] {
-        padding: 15px !important;
+        padding: 12px !important;
         border-radius: 10px !important;
         border: 2px solid #CED4DA !important;
         background-color: #FFFFFF !important;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
     div[data-testid="stCheckbox"]:has(input:checked) {
         background-color: #E7F1FF !important;
         border-color: #007BFF !important;
     }
-    div[data-testid="stCheckbox"] label p {
-        font-size: 1.2rem !important;
-        font-weight: 700 !important;
-        color: #1A1A1A !important;
-    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- XỬ LÝ DỮ LIỆU (Giữ nguyên cấu trúc) ---
+# --- XỬ LÝ DỮ LIỆU ---
 DATA_FILE = "attendance_data.csv"
 STUDENT_FILE = "student_list.csv"
 ADJUST_FILE = "adjustments.csv"
@@ -106,23 +87,19 @@ def save_data():
 
 load_data()
 
-# --- GIAO DIỆN ---
-st.markdown("<h2 style='text-align: center; color: #000000;'>📋 QUẢN LÝ ĐIỂM DANH</h2>", unsafe_allow_html=True)
+# --- GIAO DIỆN CHÍNH ---
+st.markdown("<h2 style='text-align: center; color: #000;'>📒 QUẢN LÝ LỚP HỌC</h2>", unsafe_allow_html=True)
 
-tab1, tab_log, tab2, tab3 = st.tabs(["📍 ĐIỂM DANH", "📑 NHẬT KÝ", "📊 TỔNG HỢP", "⚙️ CÀI ĐẶT"])
+tab1, tab_log, tab2, tab_fee, tab3 = st.tabs(["📍 ĐIỂM DANH", "📑 NHẬT KÝ", "📊 TỔNG HỢP", "💰 HỌC PHÍ", "⚙️ CÀI ĐẶT"])
 
 # --- TAB 1: ĐIỂM DANH ---
 with tab1:
-    col_d, _ = st.columns([3, 2])
-    with col_d:
-        selected_date = st.date_input("Chọn ngày", label_visibility="collapsed")
+    selected_date = st.date_input("Chọn ngày", label_visibility="collapsed")
     date_str = selected_date.strftime("%Y-%m-%d")
     st.markdown(f"🗓️ **{THU_VN.get(selected_date.strftime('%A'))}, {selected_date.strftime('%d/%m/%Y')}**")
     
-    st.write("")
     for s in st.session_state.students:
         is_checked = not st.session_state.attendance_df[(st.session_state.attendance_df['Student'] == s) & (st.session_state.attendance_df['Date'] == date_str)].empty
-        
         if st.checkbox(s, value=is_checked, key=f"ck_{s}_{date_str}"):
             if not is_checked:
                 new_row = pd.DataFrame({'Student': [s], 'Date': [date_str]})
@@ -133,40 +110,28 @@ with tab1:
                 st.session_state.attendance_df = st.session_state.attendance_df[~((st.session_state.attendance_df['Student'] == s) & (st.session_state.attendance_df['Date'] == date_str))]
                 save_data()
 
-# --- TAB 2: NHẬT KÝ (SỬA LẠI THEO YÊU CẦU) ---
+# --- TAB 2: NHẬT KÝ ---
 with tab_log:
     if st.session_state.students:
-        s_view = st.selectbox("Chọn học sinh:", st.session_state.students)
+        s_view = st.selectbox("Chọn học sinh xem lịch:", st.session_state.students)
         history = st.session_state.attendance_df[st.session_state.attendance_df['Student'] == s_view]
-        
-        # Ô TÊN HỌC SINH TO DỄ NHÌN
-        st.markdown(f"""
-            <div class="student-header-box">
-                <p style="font-size: 0.9rem; color: #666; margin-bottom: 5px;">Đang xem nhật ký của:</p>
-                <h1 class="student-header-name">👤 {s_view}</h1>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        st.markdown(f"**Tổng số buổi tích lịch:** <span style='color:#007bff; font-size:24px; font-weight:bold;'>{len(history)} buổi</span>", unsafe_allow_html=True)
-        st.write("---")
-        
+        st.markdown(f"<div class='header-box'><h1 style='margin:0; color:#004085;'>👤 {s_view}</h1></div>", unsafe_allow_html=True)
+        st.write(f"Tổng buổi từ lịch: **{len(history)} buổi**")
         if not history.empty:
-            sorted_days = sorted(history['Date'].tolist(), reverse=True)
-            for d in sorted_days:
+            for d in sorted(history['Date'].tolist(), reverse=True):
                 dt = datetime.strptime(d, "%Y-%m-%d")
                 st.markdown(f"🔹 **{THU_VN.get(dt.strftime('%A'))}**, {dt.strftime('%d/%m/%Y')}")
 
 # --- TAB 3: TỔNG HỢP ---
 with tab2:
-    st.write("")
+    st.markdown("### 📊 Chốt số buổi")
     for s in st.session_state.students:
         auto_count = len(st.session_state.attendance_df[st.session_state.attendance_df['Student'] == s])
         adj_val = st.session_state.adjustments.get(s, 0)
         total = auto_count + adj_val
         
         col_name, col_btns, col_res = st.columns([2.5, 1, 1.5])
-        
-        col_name.markdown(f"<div style='padding-top:8px;'><span class='st-student-name'>👤 {s}</span></div>", unsafe_allow_html=True)
+        col_name.markdown(f"<div style='padding-top:8px;'><b>{s}</b></div>", unsafe_allow_html=True)
         
         b1, b2 = col_btns.columns(2)
         if b1.button("➖", key=f"s_{s}"):
@@ -178,19 +143,45 @@ with tab2:
             save_data(); st.rerun()
             
         col_res.markdown(f"<div style='text-align:right; padding-top:4px;'><span class='total-count'>{total} buổi</span></div>", unsafe_allow_html=True)
-        st.markdown("<div style='height:1px; background-color:#DEE2E6; margin:4px 0px;'></div>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin:4px 0px; border-top: 1px solid #eee;'>", unsafe_allow_html=True)
 
-# --- TAB 4: CÀI ĐẶT ---
+# --- TAB 4: HỌC PHÍ (MỚI) ---
+with tab_fee:
+    st.markdown("### 💰 Tổng hợp học phí")
+    st.caption(f"Đơn giá quy định: {GIA_MOT_BUOI:,}đ / buổi")
+    
+    tong_ca_lop = 0
+    for s in st.session_state.students:
+        auto_count = len(st.session_state.attendance_df[st.session_state.attendance_df['Student'] == s])
+        adj_val = st.session_state.adjustments.get(s, 0)
+        total_sessions = auto_count + adj_val
+        total_money = total_sessions * GIA_MOT_BUOI
+        tong_ca_lop += total_money
+        
+        # Hiển thị thẻ học phí từng người
+        st.markdown(f"""
+            <div class="fee-card">
+                <div>
+                    <b style="font-size:1.1rem;">👤 {s}</b><br>
+                    <small>Số buổi chốt: {total_sessions} buổi</small>
+                </div>
+                <div class="fee-amount">{total_money:,}đ</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+    st.divider()
+    st.markdown(f"<h3 style='text-align:right;'>Tổng thu cả lớp: <span style='color:#28A745;'>{tong_ca_lop:,}đ</span></h3>", unsafe_allow_html=True)
+
+# --- TAB 5: CÀI ĐẶT ---
 with tab3:
-    new_name = st.text_input("Nhập tên học sinh mới:")
+    new_name = st.text_input("Thêm học sinh mới:")
     if st.button("Lưu học sinh"):
         if new_name and new_name not in st.session_state.students:
             st.session_state.students.append(new_name); st.session_state.adjustments[new_name] = 0
             save_data(); st.rerun()
-    
     st.write("---")
     for s in st.session_state.students:
         c1, c2 = st.columns([5, 1])
-        c1.write(f"👤 {s}")
+        c1.write(f"• {s}")
         if c2.button("🗑️", key=f"d_{s}"):
             st.session_state.students.remove(s); save_data(); st.rerun()
