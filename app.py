@@ -7,7 +7,7 @@ from datetime import datetime
 st.set_page_config(page_title="Quản Lý Học Phí & Điểm Danh", layout="wide")
 
 # Quy định giá tiền
-GIA_MOT_BUOI = 150000
+GIA_MOT_BUOI = 15000
 
 st.markdown("""
     <style>
@@ -185,3 +185,4 @@ with tab3:
         c1.write(f"• {s}")
         if c2.button("🗑️", key=f"d_{s}"):
             st.session_state.students.remove(s); save_data(); st.rerun()
+
