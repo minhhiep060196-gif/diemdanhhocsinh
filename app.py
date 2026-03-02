@@ -147,7 +147,7 @@ with tab_total:
     mode = st.radio("Chế độ tính:", ["Tính tất cả", "Chọn từng học sinh"], horizontal=True)
     
     # Ô nhập số tiền chung
-    unit_price = st.number_input("Nhập số tiền cho 1 buổi (đ):", min_value=0, value=0, step=1000)
+    unit_price = st.number_input("Nhập số:", min_value=0, value=0, step=1000)
     
     st.write("---")
     
@@ -172,14 +172,14 @@ with tab_total:
             <div class="fee-card">
                 <div>
                     <b style="font-size:1.1rem;">👤 {s}</b><br>
-                    <small>Số buổi: {total_sessions} buổi x {unit_price:,}đ</small>
+                    <small>Số buổi: {total_sessions} buổi x {unit_price:,}</small>
                 </div>
-                <div class="fee-amount">{student_money:,}đ</div>
+                <div class="fee-amount">{student_money:,}</div>
             </div>
             """, unsafe_allow_html=True)
             
     st.divider()
-    st.markdown(f"<h3 style='text-align:right;'>Tổng: <span style='color:#28A745;'>{grand_total:,}đ</span></h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align:right;'>Tổng: <span style='color:#28A745;'>{grand_total:,}</span></h3>", unsafe_allow_html=True)
 
 # --- TAB 5: CÀI ĐẶT ---
 with tab3:
