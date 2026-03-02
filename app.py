@@ -4,16 +4,12 @@ import os
 from datetime import datetime
 
 # 1. CẤU HÌNH GIAO DIỆN
-st.set_page_config(page_title="Quản Lý Học Phí & Điểm Danh", layout="wide")
-
-# Quy định giá tiền
-GIA_MOT_BUOI = 15000
+st.set_page_config(page_title="Quản Lý Lớp Học", layout="wide")
 
 st.markdown("""
     <style>
     .stApp { background-color: #FFFFFF; }
     
-    /* Khung tên học sinh trong Nhật Ký & Học Phí */
     .header-box {
         background-color: #E7F1FF;
         padding: 15px;
@@ -22,7 +18,6 @@ st.markdown("""
         margin-bottom: 20px;
     }
     
-    /* Thẻ học phí học sinh */
     .fee-card {
         background-color: #F8F9FA;
         padding: 15px;
@@ -46,7 +41,6 @@ st.markdown("""
         font-size: 1.1rem;
     }
 
-    /* Tùy chỉnh Checkbox Điểm danh */
     div[data-testid="stCheckbox"] {
         padding: 12px !important;
         border-radius: 10px !important;
@@ -90,7 +84,7 @@ load_data()
 # --- GIAO DIỆN CHÍNH ---
 st.markdown("<h2 style='text-align: center; color: #000;'>📒 QUẢN LÝ LỚP HỌC</h2>", unsafe_allow_html=True)
 
-tab1, tab_log, tab2, tab_fee, tab3 = st.tabs(["📍 ĐIỂM DANH", "📑 NHẬT KÝ", "📊 TỔNG HỢP", "💰 HỌC PHÍ", "⚙️ CÀI ĐẶT"])
+tab1, tab_log, tab_sum, tab_total, tab3 = st.tabs(["📍 ĐIỂM DANH", "📑 NHẬT KÝ", "📊 TỔNG HỢP", "📊 TỔNG KẾT", "⚙️ CÀI ĐẶT"])
 
 # --- TAB 1: ĐIỂM DANH ---
 with tab1:
@@ -123,7 +117,7 @@ with tab_log:
                 st.markdown(f"🔹 **{THU_VN.get(dt.strftime('%A'))}**, {dt.strftime('%d/%m/%Y')}")
 
 # --- TAB 3: TỔNG HỢP ---
-with tab2:
+with tab_sum:
     st.markdown("### 📊 Chốt số buổi")
     for s in st.session_state.students:
         auto_count = len(st.session_state.attendance_df[st.session_state.attendance_df['Student'] == s])
@@ -145,32 +139,47 @@ with tab2:
         col_res.markdown(f"<div style='text-align:right; padding-top:4px;'><span class='total-count'>{total} buổi</span></div>", unsafe_allow_html=True)
         st.markdown("<hr style='margin:4px 0px; border-top: 1px solid #eee;'>", unsafe_allow_html=True)
 
-# --- TAB 4: HỌC PHÍ (MỚI) ---
-with tab_fee:
-    st.markdown("### 💰 Tổng hợp học phí")
-    st.caption(f"Đơn giá quy định: {GIA_MOT_BUOI:,}đ / buổi")
+# --- TAB 4: TỔNG KẾT (ĐÃ SỬA) ---
+with tab_total:
+    st.markdown("### 📊 Tổng kết")
     
-    tong_ca_lop = 0
-    for s in st.session_state.students:
+    # Lựa chọn cách tính
+    mode = st.radio("Chế độ tính:", ["Tính tất cả", "Chọn từng học sinh"], horizontal=True)
+    
+    # Ô nhập số tiền chung
+    unit_price = st.number_input("Nhập số tiền cho 1 buổi (đ):", min_value=0, value=0, step=1000)
+    
+    st.write("---")
+    
+    grand_total = 0
+    
+    # Lọc danh sách hiển thị
+    display_students = st.session_state.students
+    if mode == "Chọn từng học sinh":
+        display_students = st.multiselect("Chọn học sinh cần tính:", st.session_state.students, default=st.session_state.students)
+
+    for s in display_students:
         auto_count = len(st.session_state.attendance_df[st.session_state.attendance_df['Student'] == s])
         adj_val = st.session_state.adjustments.get(s, 0)
         total_sessions = auto_count + adj_val
-        total_money = total_sessions * GIA_MOT_BUOI
-        tong_ca_lop += total_money
         
-        # Hiển thị thẻ học phí từng người
+        # Tính tiền
+        student_money = total_sessions * unit_price
+        grand_total += student_money
+        
+        # Hiển thị thẻ
         st.markdown(f"""
             <div class="fee-card">
                 <div>
                     <b style="font-size:1.1rem;">👤 {s}</b><br>
-                    <small>Số buổi chốt: {total_sessions} buổi</small>
+                    <small>Số buổi: {total_sessions} buổi x {unit_price:,}đ</small>
                 </div>
-                <div class="fee-amount">{total_money:,}đ</div>
+                <div class="fee-amount">{student_money:,}đ</div>
             </div>
             """, unsafe_allow_html=True)
             
     st.divider()
-    st.markdown(f"<h3 style='text-align:right;'>Tổng thu cả lớp: <span style='color:#28A745;'>{tong_ca_lop:,}đ</span></h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align:right;'>Tổng: <span style='color:#28A745;'>{grand_total:,}đ</span></h3>", unsafe_allow_html=True)
 
 # --- TAB 5: CÀI ĐẶT ---
 with tab3:
@@ -185,4 +194,3 @@ with tab3:
         c1.write(f"• {s}")
         if c2.button("🗑️", key=f"d_{s}"):
             st.session_state.students.remove(s); save_data(); st.rerun()
-
