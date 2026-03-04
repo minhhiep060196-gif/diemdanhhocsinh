@@ -12,8 +12,10 @@ st.set_page_config(page_title="Quản Lý Lớp Học LOP5D", layout="wide")
 try:
     GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
     REPO_NAME = st.secrets["REPO_NAME"]
+    # Thêm dòng dưới đây: Nếu không cài tên trong Secrets, nó sẽ hiện tên mặc định
+    APP_TITLE = st.secrets.get("APP_TITLE", "QUẢN LÝ LỚP HỌC LOP5D")
 except:
-    st.error("⚠️ Thiếu cấu hình Secrets! Hãy thêm GITHUB_TOKEN và REPO_NAME vào Settings > Secrets.")
+    st.error("⚠️ Thiếu cấu hình Secrets!")
     st.stop()
 
 BRANCH = "chính" # Tên nhánh trên GitHub của bạn
@@ -81,7 +83,7 @@ def save_all_data():
 load_data()
 
 # --- GIAO DIỆN CHÍNH ---
-st.markdown("<h2 style='text-align: center; color: #000;'>📒 QUẢN LÝ LỚP HỌC LOP5D</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center; color: #000;'>📒 QUẢN LÝ LỚP HỌC</h2>", unsafe_allow_html=True)
 tab1, tab_log, tab_sum, tab_total, tab3 = st.tabs(["📍 ĐIỂM DANH", "📑 NHẬT KÝ", "📊 TỔNG HỢP", "📊 TỔNG KẾT", "⚙️ CÀI ĐẶT"])
 
 # --- TAB 1: ĐIỂM DANH ---
@@ -187,3 +189,4 @@ with tab3:
             st.session_state.students.remove(s)
             save_all_data()
             st.rerun()
+
