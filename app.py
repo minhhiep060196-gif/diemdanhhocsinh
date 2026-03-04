@@ -83,7 +83,7 @@ def save_all_data():
 load_data()
 
 # --- GIAO DIỆN CHÍNH ---
-st.markdown("<h2 style='text-align: center; color: #000;'>📒 QUẢN LÝ LỚP HỌC</h2>", unsafe_allow_html=True)
+st.markdown(f"<h2 style='text-align: center; color: #000;'>📒 {APP_TITLE}</h2>", unsafe_allow_html=True)
 tab1, tab_log, tab_sum, tab_total, tab3 = st.tabs(["📍 ĐIỂM DANH", "📑 NHẬT KÝ", "📊 TỔNG HỢP", "📊 TỔNG KẾT", "⚙️ CÀI ĐẶT"])
 
 # --- TAB 1: ĐIỂM DANH ---
@@ -189,4 +189,5 @@ with tab3:
             st.session_state.students.remove(s)
             save_all_data()
             st.rerun()
+
 
