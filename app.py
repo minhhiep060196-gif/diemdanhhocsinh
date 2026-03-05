@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import base64
-import io  # QUAN TRỌNG: Sửa lỗi AttributeError
+import io
 from datetime import datetime
 
 # --- 1. CẤU HÌNH GIAO DIỆN ---
@@ -29,7 +29,7 @@ def get_github_file(file_name):
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         content = base64.b64decode(r.json()["content"]).decode('utf-8')
-        return pd.read_csv(io.StringIO(content)) # Dùng io.StringIO để sửa lỗi
+        return pd.read_csv(io.StringIO(content))
     return None
 
 def save_to_github(file_name, df):
@@ -45,27 +45,23 @@ def save_to_github(file_name, df):
 # --- 3. KHỞI TẠO DỮ LIỆU ---
 THU_VN = {'Monday': 'Thứ Hai', 'Tuesday': 'Thứ Ba', 'Wednesday': 'Thứ Tư', 'Thursday': 'Thứ Năm', 'Friday': 'Thứ Sáu', 'Saturday': 'Thứ Bảy', 'Sunday': 'Chủ Nhật'}
 
-def load_data():
-    if 'students' not in st.session_state:
-        df = get_github_file(STUDENT_FILE)
-        st.session_state.students = df['name'].tolist() if df is not None else []
-    if 'attendance_df' not in st.session_state:
-        df = get_github_file(DATA_FILE)
-        st.session_state.attendance_df = df if df is not None else pd.DataFrame(columns=['Student', 'Date'])
-    if 'adjustments' not in st.session_state:
-        df = get_github_file(ADJUST_FILE)
-        if df is not None:
-            st.session_state.adjustments = dict(zip(df['Student'].astype(str), df['Value']))
-        else:
-            st.session_state.adjustments = {str(s): 0 for s in st.session_state.students}
-
-load_data()
+if 'students' not in st.session_state:
+    df = get_github_file(STUDENT_FILE)
+    st.session_state.students = df['name'].tolist() if df is not None else []
+if 'attendance_df' not in st.session_state:
+    df = get_github_file(DATA_FILE)
+    st.session_state.attendance_df = df if df is not None else pd.DataFrame(columns=['Student', 'Date'])
+if 'adjustments' not in st.session_state:
+    df = get_github_file(ADJUST_FILE)
+    if df is not None:
+        st.session_state.adjustments = dict(zip(df['Student'].astype(str), df['Value']))
+    else:
+        st.session_state.adjustments = {str(s): 0 for s in st.session_state.students}
 
 # --- 4. GIAO DIỆN CHÍNH ---
 st.markdown(f"<h2 style='text-align: center; color: #000;'>📒 {APP_TITLE}</h2>", unsafe_allow_html=True)
-tab1, tab_log, tab_sum, tab_total, tab3 = st.tabs(["📍 ĐIỂM DANH", "📑 NHẬT KÝ", "📊 TỔNG HỢP", "📊 TỔNG KẾT", "⚙️ CÀI ĐẶT"])
+tab1, tab_log, tab_sum, tab_total, tab_set = st.tabs(["📍 ĐIỂM DANH", "📑 NHẬT KÝ", "📊 TỔNG HỢP", "💰 TỔNG KẾT", "⚙️ CÀI ĐẶT"])
 
-# --- NỘI DUNG CÁC TAB (GIỮ NGUYÊN NHƯ BẢN BẠN GỬI) ---
 with tab1:
     selected_date = st.date_input("Chọn ngày", label_visibility="collapsed")
     date_str = selected_date.strftime("%Y-%m-%d")
@@ -84,52 +80,40 @@ with tab1:
 
 with tab_log:
     if st.session_state.students:
-        s_view = st.selectbox("Chọn học sinh xem lịch:", st.session_state.students)
+        s_view = st.selectbox("Chọn học học sinh:", st.session_state.students)
         history = st.session_state.attendance_df[st.session_state.attendance_df['Student'] == s_view]
-        st.write(f"Tổng buổi: **{len(history)} buổi**")
-        if not history.empty:
-            for d in sorted(history['Date'].tolist(), reverse=True):
-                dt = datetime.strptime(d, "%Y-%m-%d")
-                st.markdown(f"🔹 **{THU_VN.get(dt.strftime('%A'))}**, {dt.strftime('%d/%m/%Y')}")
+        st.write(f"Tổng buổi: {len(history)}")
+        for d in sorted(history['Date'].tolist(), reverse=True):
+            st.write(f"🔹 {d}")
 
 with tab_sum:
-    st.markdown("### 📊 Chốt số buổi")
+    st.markdown("### 📊 Chốt buổi")
     for s in st.session_state.students:
-        auto_count = len(st.session_state.attendance_df[st.session_state.attendance_df['Student'] == s])
-        adj_val = st.session_state.adjustments.get(str(s), 0)
-        total = auto_count + adj_val
-        col1, col2, col3 = st.columns([2, 1, 1])
-        col1.write(f"**{s}**")
-        if col2.button("➕", key=f"add_{s}"):
-            st.session_state.adjustments[str(s)] = adj_val + 1
+        auto = len(st.session_state.attendance_df[st.session_state.attendance_df['Student'] == s])
+        adj = st.session_state.adjustments.get(str(s), 0)
+        c1, c2, c3 = st.columns([2, 1, 1])
+        c1.write(f"**{s}**: {auto + adj} buổi")
+        if c2.button("➕", key=f"a_{s}"):
+            st.session_state.adjustments[str(s)] = adj + 1
             save_to_github(ADJUST_FILE, pd.DataFrame(list(st.session_state.adjustments.items()), columns=['Student', 'Value']))
             st.rerun()
-        if col3.button("➖", key=f"sub_{s}"):
-            st.session_state.adjustments[str(s)] = max(-20, adj_val - 1)
+        if c3.button("➖", key=f"s_{s}"):
+            st.session_state.adjustments[str(s)] = adj - 1
             save_to_github(ADJUST_FILE, pd.DataFrame(list(st.session_state.adjustments.items()), columns=['Student', 'Value']))
             st.rerun()
 
 with tab_total:
-    st.markdown("### 💰 Tổng kết tiền")
-    unit_price = st.number_input("Giá 1 buổi (đ):", min_value=0, value=0, step=1000)
-    grand_total = 0
+    price = st.number_input("Giá 1 buổi:", min_value=0, value=0)
     for s in st.session_state.students:
-        count = len(st.session_state.attendance_df[st.session_state.attendance_df['Student'] == s]) + st.session_state.adjustments.get(str(s), 0)
-        money = count * unit_price
-        grand_total += money
-        st.write(f"👤 {s}: {count} buổi = **{money:,}đ**")
-    st.divider()
-    st.markdown(f"### Tổng cộng: {grand_total:,}đ")
+        total = len(st.session_state.attendance_df[st.session_state.attendance_df['Student'] == s]) + st.session_state.adjustments.get(str(s), 0)
+        st.write(f"👤 {s}: {total * price:,}đ")
 
-with tab3:
-    new_name = st.text_input("Thêm học sinh mới:")
+with tab_set:
+    name = st.text_input("Tên học sinh mới:")
     if st.button("Lưu"):
-        if new_name and new_name not in st.session_state.students:
-            st.session_state.students.append(new_name)
-            st.session_state.adjustments[str(new_name)] = 0
+        if name and name not in st.session_state.students:
+            st.session_state.students.append(name)
+            st.session_state.adjustments[str(name)] = 0
             save_to_github(STUDENT_FILE, pd.DataFrame({'name': st.session_state.students}))
-            save_to_github(ADJUST_FILE, pd.DataFrame(list(st.
-
-
-
-
+            save_to_github(ADJUST_FILE, pd.DataFrame(list(st.session_state.adjustments.items()), columns=['Student', 'Value']))
+            st.rerun()
