@@ -18,7 +18,7 @@ except:
     st.error("⚠️ Thiếu cấu hình Secrets!")
     st.stop()
 
-BRANCH = "chính" # Tên nhánh trên GitHub của bạn
+BRANCH = "main" # Tên nhánh trên GitHub của bạn
 STUDENT_FILE = "student_list.csv"
 DATA_FILE = "attendance_data.csv"
 ADJUST_FILE = "adjustments.csv"
@@ -189,5 +189,6 @@ with tab3:
             st.session_state.students.remove(s)
             save_all_data()
             st.rerun()
+
 
 
