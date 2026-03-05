@@ -1,49 +1,43 @@
-﻿import streamlit as st
+import streamlit as st
 import pandas as pd
 import requests
 import base64
-import os
+import io  # Dòng này cực kỳ quan trọng để sửa lỗi AttributeError
 from datetime import datetime
 
-# 1. CẤU HÌNH GIAO DIỆN
+# --- 1. CẤU HÌNH GIAO DIỆN ---
 st.set_page_config(page_title="Quản Lý Lớp Học LOP5D", layout="wide")
 
-# Lấy cấu hình từ Secrets (Phải điền trên Streamlit Cloud)
+# Lấy cấu hình từ Secrets
 try:
     GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
     REPO_NAME = st.secrets["REPO_NAME"]
-    # Thêm dòng dưới đây: Nếu không cài tên trong Secrets, nó sẽ hiện tên mặc định
-    APP_TITLE = st.secrets.get("APP_TITLE", "QUẢN LÝ LỚP HỌC LOP5D")
+    BRANCH = st.secrets.get("BRANCH", "main") # Lấy nhánh từ Secrets, mặc định là main
+    APP_TITLE = st.secrets.get("APP_TITLE", "QUẢN LÝ LỚP HỌC")
 except:
-    st.error("⚠️ Thiếu cấu hình Secrets!")
+    st.error("Thiếu cấu hình Secrets! Vui lòng kiểm tra lại Settings > Secrets.")
     st.stop()
 
-BRANCH = "main" # Tên nhánh trên GitHub của bạn
-STUDENT_FILE = "student_list.csv"
-DATA_FILE = "attendance_data.csv"
-ADJUST_FILE = "adjustments.csv"
-
-st.markdown("""
-    <style>
-    .stApp { background-color: #FFFFFF; }
-    .header-box { background-color: #E7F1FF; padding: 15px; border-radius: 12px; border-left: 8px solid #28A745; margin-bottom: 20px; }
-    .fee-card { background-color: #F8F9FA; padding: 15px; border-radius: 12px; border: 1px solid #DEE2E6; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-    .fee-amount { color: #28A745; font-weight: 800; font-size: 1.4rem; }
-    .total-count { color: #0056b3; font-weight: 800; font-size: 1.1rem; }
-    div[data-testid="stCheckbox"] { padding: 12px !important; border-radius: 10px !important; border: 2px solid #CED4DA !important; background-color: #FFFFFF !important; margin-bottom: 8px; }
-    div[data-testid="stCheckbox"]:has(input:checked) { background-color: #E7F1FF !important; border-color: #007BFF !important; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- HÀM XỬ LÝ GITHUB (THAY THẾ LƯU FILE CỨNG) ---
+# --- 2. HÀM XỬ LÝ GITHUB (ĐÃ SỬA LỖI) ---
 def get_github_file(file_name):
     url = f"https://api.github.com/repos/{REPO_NAME}/contents/{file_name}?ref={BRANCH}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         content = base64.b64decode(r.json()["content"]).decode('utf-8')
-        return pd.read_csv(pd.compat.StringIO(content))
+        # Sửa lỗi AttributeError bằng cách dùng io.StringIO thay vì pd.compat
+        return pd.read_csv(io.StringIO(content))
     return None
+
+def save_to_github(file_name, df):
+    url = f"https://api.github.com/repos/{REPO_NAME}/contents/{file_name}"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    r_get = requests.get(url + f"?ref={BRANCH}", headers=headers)
+    sha = r_get.json().get("sha") if r_get.status_code == 200 else None
+    content_encoded = base64.b64encode(df.to_csv(index=False).encode()).decode()
+    payload = {"message": f"Update {file_name}", "content": content_encoded, "branch": BRANCH}
+    if sha: payload["sha"] = sha
+    requests.put(url, json=payload, headers=headers)
 
 def save_to_github(file_name, df):
     url = f"https://api.github.com/repos/{REPO_NAME}/contents/{file_name}"
@@ -189,6 +183,7 @@ with tab3:
             st.session_state.students.remove(s)
             save_all_data()
             st.rerun()
+
 
 
 
